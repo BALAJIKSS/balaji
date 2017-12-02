@@ -1,4 +1,4 @@
-#Computer Vision Assignments
+# Computer Vision Assignments
 1.Gaussian Mixture Model based Background Subtraction
 Implemented Adaptive Gaussian Mixture Model based Background Subtraction
 2.KLT Tracker
