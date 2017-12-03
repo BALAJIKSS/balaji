@@ -1,6 +1,12 @@
+# The below code is also an implementation of Lucas-Kanade Tracker.This follows 
+# "Inverse Compositional Algorithm" mentioned in Lucas-Kanade 20 Years On: A Unifying Framework: Part 1" by 
+# Simon Baker and Iain Matthews
+# The first frame of the video is taken as input and the rest of the frames are warped to this template image
+# 500 iterations are done per frame by default.This can changed.
+# The below code takes time to execute but the results are fabulous.
 import numpy as np
 import cv2
-
+# Lucas Kanade Algorithm
 def MLK(img,template,max_iter=500,min_norm=0.01):
     img_gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY).astype(np.float32)
     template_gray = cv2.cvtColor(template,cv2.COLOR_RGB2GRAY).astype(np.float32)
@@ -21,9 +27,6 @@ def MLK(img,template,max_iter=500,min_norm=0.01):
 
     j[:,:,4,0] = np.ones((x,y))
     j[:,:,5,1] = np.ones((x,y))
-
-
-    
     steep_d = np.einsum('ijkl,ijml->ijkm',dt,j)
     steep_d_T = np.rollaxis(steep_d,3,2)
     m = np.einsum('ijkl,ijlm->ijkm',steep_d_T,steep_d)
@@ -37,13 +40,12 @@ def MLK(img,template,max_iter=500,min_norm=0.01):
 
     while pn > min_norm and iter < max_iter:
         img_warp = cv2.warpAffine(img_gray,pv+p1,(img_gray.shape[1],img_gray.shape[0])).astype(np.float32)
-        
         error_img = (img_warp - template_gray).reshape((img_gray.shape[0],img_gray.shape[1],1,1))
         summ_m = np.einsum('ijkl,ijlm->ijkm',steep_d_T,error_img)
         summ = np.sum(np.sum(summ_m,axis=0),axis=0)
         dp = np.dot(h_inv,summ)
         pv_copy = pv.copy()
-
+        # point update
         pv[0,0] = pv_copy[0,0] + dp[0] + pv_copy[0,0]*dp[0] + pv_copy[0,1]*dp[1]
         pv[1,1] = pv_copy[1,1] + dp[3] + pv_copy[1,0]*dp[2] + pv_copy[1,1]*dp[3]
         pv[0,2] = pv_copy[0,2] + dp[4] + pv_copy[0,0]*dp[4] + pv_copy[0,1]*dp[5]
@@ -54,7 +56,7 @@ def MLK(img,template,max_iter=500,min_norm=0.01):
         
         pn = np.linalg.norm(dp)
         iter = iter + 1
-        
+     # Warp Affine
     img_warp = cv2.warpAffine(img_gray,pv+p1,(img_gray.shape[1],img_gray.shape[0]))
     return img_warp.astype(np.uint8)
 
@@ -62,15 +64,16 @@ def MLK(img,template,max_iter=500,min_norm=0.01):
 if __name__ == "__main__":
     vid = cv2.VideoCapture('train3.mp4')
     length = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+    #Get frames per second
     fps = int(vid.get(cv2.cv.CV_CAP_PROP_FPS))
     print(length," - ",fps)
     ret, frame = vid.read()
-
+    
     template = frame
     template_gray = cv2.cvtColor(template,cv2.COLOR_RGB2GRAY)
     fourcc = cv2.cv.CV_FOURCC(*'XVID')
 
-
+    #Save video
     out = cv2.VideoWriter("out.mp4",fourcc,fps,(template_gray.shape[1],template_gray.shape[0]))
     out.write(np.repeat(template_gray[...,None],3,axis=2))
     frame_count = 1
